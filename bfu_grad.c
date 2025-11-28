@@ -58,8 +58,12 @@ void menu_count(){
     printf("%d.统计某一年份从事不同专业的人数和比例\n",count_job_major);
     printf("%d.返回上级菜单\n",count_return);
 }
+void import_data(struct Student arr[]){
+    
+
+}
 int main(){
     menu_main();
     struct Student stu[100];
-    
+
 }
