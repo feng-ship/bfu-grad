@@ -202,6 +202,38 @@ void import_data(struct Student arr[],int *count){
         return;
     }
 }
+void view_data(struct Student arr[],int count){
+    printf("==========浏览毕业生就业信息==========\n");
+    if(count==0){
+        printf("【提示】当前无数据可浏览,请先导入或添加数据!\n");
+        return;
+    }
+    for(int i=0;i<count;i++){
+        printf("%-12s %-8s %-4s %-12s %-8s %-8s %-6s %-12s %-12s %-20s %-12s\n",
+       "学号", "姓名", "性别", "出生日期",
+       "入学年", "毕业年", "学历", "专业",
+       "就业去向", "单位名称", "从事专业");
+        printf("%-12s %-8s %-4s %04d/%02d/%02d %-8d %-8d %-6s %-12s %-12s %-20s %-12s\n ",
+            arr[i].id,
+            arr[i].name,
+            arr[i].gender==F?"女":"男",
+            arr[i].bd.year,arr[i].bd.month,arr[i].bd.day,
+            arr[i].enroll_year,
+            arr[i].graduation_year,
+            arr[i].degree==本科生?"本科生":arr[i].degree==硕士研究生?"硕士研究生":"博士研究生",
+            arr[i].major,
+            arr[i].career==直接工作?"直接工作":arr[i].career==公务员?"公务员":arr[i].career==国内读硕?"国内读硕":arr[i].career==出国读硕?"出国读硕":arr[i].career==国内读博?"国内读博":arr[i].career==国外读博?"国外读博":arr[i].career==二战?"二战":arr[i].career==二学位?"二学位":arr[i].career==未就业?"未就业":"其他",
+            arr[i].employer,
+            arr[i].job_major
+        );
+    }
+}
+void search_data(struct Student arr[],int count){
+    printf("==========查询毕业生就业信息==========\n");
+    printf("功能开发中，敬请期待!\n");
+
+
+}
 int main(){
     struct Student stu[MAXN];
     int current_count=0;
@@ -212,6 +244,10 @@ int main(){
         case import:
         import_data(stu,&current_count);
         break;
+        case view:
+        view_data(stu,current_count);
+        break;
+
     }
 
 }
