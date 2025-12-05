@@ -23,6 +23,10 @@ enum CountChoice{
     count_job_major,
     count_return=0
 };
+enum SearchChoice{
+    search_id=1,
+    search_name
+};
 struct BirthDate{
     int year;
     int month;
@@ -228,15 +232,163 @@ void view_data(struct Student arr[],int count){
         );
     }
 }
+struct Student* search_by_id(struct Student arr[],int count,const char* id_to_search){
+    for(int i=0;i<count;i++){
+        if(strcmp(arr[i].id,id_to_search)==0){
+            return &arr[i];
+        }
+    }
+    return NULL;
+}
+struct Student* search_by_name(struct Student arr[],int count,const char* name_to_search){
+    for(int i=0;i<count;i++){
+        if(strcmp(arr[i].id,name_to_search)==0){
+            return &arr[i];
+        }
+    }
+    return NULL;
+}
 void search_data(struct Student arr[],int count){
     printf("==========查询毕业生就业信息==========\n");
-    printf("功能开发中，敬请期待!\n");
-
-
+    printf("%d.按学号查询\n",search_id);
+    printf("%d.按姓名查询\n",search_name);
+    printf("请选择查询方式:\n");
+    int search_choice=0;
+    scanf("%d",&search_choice);
+    switch(search_choice){
+        case search_id:{
+            char id_to_search[20];
+            printf("请输入要查询的学号:\n");
+            scanf("%s",id_to_search);
+            struct Student* result=search_by_id(arr,count,id_to_search);
+            if(result!=NULL){
+                printf("【成功】找到该毕业生信息:\n");
+                printf("%-12s %-8s %-4s %-12s %-8s %-8s %-6s %-12s %-12s %-20s %-12s\n",
+               "学号", "姓名", "性别", "出生日期",
+               "入学年份", "毕业年份", "学历", "专业",
+               "就业去向", "单位名称", "从事专业");
+                printf("%-12s %-8s %-4s %04d/%02d/%02d %-8d %-8d %-6s %-12s %-12s %-20s %-12s\n ",
+                    result->id,
+                    result->name,result->gender==F?"女":"男",
+                    result->bd.year,result->bd.month,result->bd.day,
+                    result->enroll_year,
+                    result->graduation_year,
+                    result->degree==本科生?"本科生":result->degree==硕士研究生?"硕士研究生":"博士研究生",
+                    result->major,
+                    result->career==直接工作?"直接工作":result->career==公务员?"公务员":result->career==国内读硕?"国内读硕":result->career==出国读硕?"出国读硕":result->career==国内读博?"国内读博":result->career==国外读博?"国外读博":result->career==二战?"二战":result->career==二学位?"二学位":result->career==未就业?"未就业":"其他",
+                    result->employer,
+                    result->job_major
+                );
+            }else{
+                printf("【失败】未找到该学号对应的毕业生信息!\n");
+            }
+            break;
+        }
+        case search_name:{
+            char name_to_search[50];
+            printf("请输入要查询的姓名:\n");
+            scanf("%s",name_to_search);
+            struct Student* result2=search_by_name(arr,count,name_to_search);
+            if(result2!=NULL){
+                printf("【成功】找到该毕业生信息:\n");
+                printf("%-12s %-8s %-4s %-12s %-8s %-8s %-6s %-12s %-12s %-20s %-12s\n",
+               "学号", "姓名", "性别", "出生日期",
+               "入学年份", "毕业年份", "学历", "专业",
+               "就业去向", "单位名称", "从事专业");
+                printf("%-12s %-8s %-4s %04d/%02d/%02d %-8d %-8d %-6s %-12s %-12s %-20s %-12s\n ",
+                    result2->id,
+                    result2->name,result2->gender==F?"女":"男",
+                    result2->bd.year,result2->bd.month,result2->bd.day,
+                    result2->enroll_year,
+                    result2->graduation_year,
+                    result2->degree==本科生?"本科生":result2->degree==硕士研究生?"硕士研究生":"博士研究生",
+                    result2->major,
+                    result2->career==直接工作?"直接工作":result2->career==公务员?"公务员":result2->career==国内读硕?"国内读硕":result2->career==出国读硕?"出国读硕":result2->career==国内读博?"国内读博":result2->career==国外读博?"国外读博":result2->career==二战?"二战":result2->career==二学位?"二学位":result2->career==未就业?"未就业":"其他",
+                    result2->employer,
+                    result2->job_major
+                );
+            }else{
+                printf("【失败】未找到该学号对应的毕业生信息!\n");
+            }
+            break;
+        }
+        default:
+            printf("【警告】无效的查询选项!\n");
+            break;
+    }
+}
+void add_data(struct Student arr[],int *count){
+    if(*count>=MAXN){
+        printf("【警告】已达到最大容量,停止导入!\n");
+    }
+    printf("==========增录毕业生就业信息==========\n");
+    printf("请按照输入示例的格式输入一条毕业生信息:\n");
+    printf("输入示例：251002125,张小寒,女,2006/12/10,2025,2029,本科生,计算机科学与技术,国内读博,北京大学,软件工程\n");
+    struct Student new_student;
+    char line[512];
+    char temp_id[20];
+    char temp_gender[10];
+    char temp_degree[20];
+    char temp_career[20];
+    if(fgets(line,sizeof(line),stdin)!=NULL){
+        int n=sscanf("%19[^,],%49[^,],%9[^,],%d/%d/%d,%d,%d,%19[^,],%19[^,],%19[^,],%99[^,],%49[^\n]",
+        new_student.id,
+        new_student.name,
+        temp_gender,
+        &new_student.bd.year,&new_student.bd.month,&new_student.bd.day,
+        &new_student.enroll_year,
+        &new_student.graduation_year,
+        temp_degree,
+        new_student.major,
+        temp_career,
+        new_student.employer,
+        new_student.job_major);
+        if(n!=13){
+            printf("【警告】数据格式错误，跳过该条记录: %s",line);
+            return;
+        }
+        if(check_dulicate(arr,*count,temp_id)){
+            printf("【警告】学号%s已存在，请重新输入",temp_id);
+            return;
+        }
+        strcpy(arr[*count].id,temp_id);
+        if(str_to_enum_gender(temp_gender)!=-1&&str_to_enum_degree(temp_degree)!=-1&&str_to_enum_career(temp_career)!=-1){
+            arr[*count].gender=str_to_enum_gender(temp_gender);
+            arr[*count].degree=str_to_enum_degree(temp_degree);
+            arr[*count].career=str_to_enum_career(temp_career); 
+        }
+        else{
+            printf("【警告】数据内容错误，跳过该条记录: %s",line);
+            return;
+        }
+        *count+=1;
+        FILE *out;
+        if(*count>0){
+        if((out=fopen("students.dat","wb"))==NULL){
+            printf("【警告】无法打开文件!\n");
+            exit(0);
+        }
+        size_t write_count=fwrite(&new_student,sizeof(struct Student),1,out);
+        if(write_count==1){
+            printf("【成功】完整导入一条数据,生成数据文件students.dat!\n");
+            return;
+        }else{
+            printf("【警告】导入数据文件时出错!\n");    
+            return;
+        }
+        fclose(out);
+    }else{
+        printf("【警告】没有有效数据导入,不生成数据文件!\n");
+        return;
+    }
+    }else{
+        printf("【警告】输入错误，操作取消!\n");
+        return;
+    }
 }
 int main(){
     struct Student stu[MAXN];
-    int current_count=0;
+    int current_count=0;    
     menu_main();
     int number1=0;
     scanf("%d",&number1);
@@ -247,7 +399,13 @@ int main(){
         case view:
         view_data(stu,current_count);
         break;
-
+        case search:
+        search_data(stu,current_count);
+        break;
+        case add:
+        add_data(stu,&current_count);
+        break;
     }
+    return 0;
 
 }
