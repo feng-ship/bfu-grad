@@ -45,6 +45,16 @@ struct Student{
     char employer[128];
     char job_major[128];
 };
+void load_data(struct Student arr[],int *count){
+    FILE *in;
+    if((in=fopen("students.dat","rb"))==NULL){
+        printf("【警告】无法打开文件!\n");
+        return;
+    }
+    size_t read_count=fread(arr,sizeof(struct Student),MAXN,in);
+    *count=read_count;
+    fclose(in);
+}
 void menu_main(){
     printf("==========信息学院(人工智能学院)毕业生就业去向管理系统==========\n");
     printf("%d.批量导入就业数据\n",import);
@@ -67,65 +77,74 @@ void menu_count(){
     printf("%d.返回上级菜单\n",count_return);
     printf("请选择功能编号:\n");
 }
-enum Gender str_to_enum_gender(const char* arr){
+int str_to_enum_gender(const char* arr,enum Gender *gender){
     if(strcmp(arr,"女")==0){
-        return F;
+        *gender=F;
+        return 1;
     }
     else if(strcmp(arr,"男")==0){
-        return M;
+        *gender=M;
+        return 1;
     }
-    else{
-        return (enum Gender)-1;
-    }
+    return 0;
 }
-enum Degree str_to_enum_degree(const char* arr){
+int str_to_enum_degree(const char* arr,enum Degree *degree){
     if(strcmp(arr,"本科生")==0){
-        return 本科生;
+        *degree=本科生;
+        return 1;
     }
     else if(strcmp(arr,"硕士研究生")==0){
-        return 硕士研究生;
+        *degree=硕士研究生;
+        return 1;
     }
     else if(strcmp(arr,"博士研究生")==0){
-        return 博士研究生;
+        *degree=博士研究生;
+        return 1;
     }
-    else{
-        return (enum Degree)-1;
-    }
+    return 0;
 }
-enum Career str_to_enum_career(const char* arr){
+int str_to_enum_career(const char* arr,enum Career *career){
     if(strcmp(arr,"直接工作")==0){
-        return 直接工作;
+        *career=直接工作;
+        return 1;
     }
     else if(strcmp(arr,"公务员")==0){
-        return 公务员;
+        *career=公务员;
+        return 1;
     }
     else if(strcmp(arr,"国内读硕")==0){
-        return 国内读硕;
+        *career=国内读硕;
+        return 1;
     }
     else if(strcmp(arr,"出国读硕")==0){
-        return 出国读硕;
+        *career=出国读硕;
+        return 1;
     }
     else if(strcmp(arr,"国内读博")==0){
-        return 国内读博;
+        *career=国内读博;
+        return 1;
     }
     else if(strcmp(arr,"国外读博")==0){
-        return 国外读博;
+        *career=国外读博;
+        return 1;
     }
     else if(strcmp(arr,"二战")==0){
-        return 二战;
+        *career=二战;
+        return 1;
     }
     else if(strcmp(arr,"二学位")==0){
-        return 二学位;
+        *career=二学位;
+        return 1;
     }
     else if(strcmp(arr,"未就业")==0){
-        return 未就业;
+        *career=未就业;
+        return 1;
     }
     else if(strcmp(arr,"其他")==0){
-        return 其他;
+        *career=其他;
+        return 1;
     }
-    else{
-        return (enum Career)-1;
-    }
+    return 0;
 }
 int check_dulicate_by_id(struct Student arr[],int count,const char* id_to_check){
     for(int i=0;i<count;i++){
@@ -135,69 +154,76 @@ int check_dulicate_by_id(struct Student arr[],int count,const char* id_to_check)
     }
     return 0;
 }
-void import_data(struct Student arr[],int *count){
-    printf("==========批量导入毕业生就业信息==========\n");
-    FILE *in,*out;
+void import_data_from_txt(struct Student arr[],int *count){
+    struct Student temp[MAXN];
+    FILE *in;
+    if((in=fopen("students.txt","r"))==NULL){
+        printf("【警告】无法打开文件!\n");
+        return;
+    }
     char line[512];
     char temp_id[32];
     char temp_gender[16];
     char temp_degree[32];
     char temp_career[32];
-    if((in=fopen("students.txt","r"))==NULL){
-        printf("【警告】无法打开文件!\n");
-        exit(0);
-    }
-    int success_count=0;
     while(fgets(line,sizeof(line),in)){
         line[strcspn(line,"\n")]=0;
         if(strlen(line)==0) continue;
-        int scanned_items = sscanf(line,"%31[^,],%63[^,],%9[^,],%d/%d/%d,%d,%d,%31[^,],%127[^,],%31[^,],%127[^,],%127[^\n]",
+        int scanned_items = sscanf(line,"%31[^,],%63[^,],%15[^,],%d/%d/%d,%d,%d,%31[^,],%127[^,],%31[^,],%127[^,],%63[^\n]",
             temp_id,
-            arr[*count].name,
+            temp[*count].name,
             temp_gender,
-            &arr[*count].bd.year,&arr[*count].bd.month,&arr[*count].bd.day,
-            &arr[*count].enroll_year,
-            &arr[*count].graduation_year,
+            &temp[*count].bd.year,&temp[*count].bd.month,&temp[*count].bd.day,
+            &temp[*count].enroll_year,
+            &temp[*count].graduation_year,
             temp_degree,
-            arr[*count].major,
+            temp[*count].major,
             temp_career,
-            arr[*count].employer,
-            arr[*count].job_major
+            temp[*count].employer,
+            temp[*count].job_major
         );
-
         if(scanned_items!=13){
-            printf("【警告】数据格式错误，跳过该条记录: %s",line);
+            printf("【警告】数据格式错误，跳过该条记录: %s\n",line);
             continue;
         }
         if(check_dulicate_by_id(arr,*count,temp_id)){
-            printf("【警告】毕业生学号%s已存在,跳过此毕业生!",temp_id);
+            printf("【警告】毕业生学号%s已存在,跳过此毕业生!\n",temp_id);
+            continue;
+        }
+        if(*count>=MAXN){
+            printf("【警告】已达到最大容量,停止导入!\n");
             continue;
         }
         strcpy(arr[*count].id,temp_id);
-        if(str_to_enum_gender(temp_gender)!=-1&&str_to_enum_degree(temp_degree)!=-1&&str_to_enum_career(temp_career)!=-1){
-            arr[*count].gender=str_to_enum_gender(temp_gender);
-            arr[*count].degree=str_to_enum_degree(temp_degree);
-            arr[*count].career=str_to_enum_career(temp_career); 
+        strcpy(arr[*count].name,temp[*count].name);
+        arr[*count].bd.year=temp[*count].bd.year;
+        arr[*count].bd.month=temp[*count].bd.month;
+        arr[*count].bd.day=temp[*count].bd.day;
+        arr[*count].enroll_year=temp[*count].enroll_year;
+        arr[*count].graduation_year=temp[*count].graduation_year;
+        strcpy(arr[*count].major,temp[*count].major);
+        strcpy(arr[*count].employer,temp[*count].employer);
+        strcpy(arr[*count].job_major,temp[*count].job_major);
+        if(str_to_enum_gender(temp_gender,&arr[*count].gender)&&str_to_enum_degree(temp_degree,&arr[*count].degree)&&str_to_enum_career(temp_career,&arr[*count].career)){
+            *count+=1;
         }
         else{
             printf("【警告】数据内容错误，跳过该条记录: %s",line);
             continue;
         }
-        *count+=1;
-        success_count++;
     }
-    if(*count>=MAXN){
-        printf("【警告】已达到最大容量,停止导入!\n");
-    }
-    fclose(in);   
-    if(*count>0){
+    fclose(in);
+}
+void save_data_to_dat(struct Student arr[],int count){
+    FILE *out;
+    if(count>0){
         if((out=fopen("students.dat","wb"))==NULL){
-        printf("【警告】无法打开文件!\n");
-        exit(0);
+            printf("【警告】无法打开文件!\n");
+            exit(0);
         }
-        size_t write_count=fwrite(arr,sizeof(struct Student),*count,out);
-        if(write_count==(size_t)*count){
-            printf("【成功】完整导入%d条数据,生成数据文件students.dat!\n",success_count);
+        size_t write_count=fwrite(arr,sizeof(struct Student),count,out);
+        if(write_count==(size_t)count){
+            printf("【成功】数据已保存，共%d条数据,生成数据文件students.dat!\n",count);
             return;
         }else{
             printf("【警告】导入数据文件时出错!\n");
@@ -205,7 +231,7 @@ void import_data(struct Student arr[],int *count){
         }
         fclose(out);
     }else{
-        printf("【警告】没有有效数据导入,不生成数据文件!\n");
+        printf("【警告】没有有效数据保存,不生成数据文件!\n");
         return;
     }
 }
@@ -244,7 +270,7 @@ struct Student* search_by_id(struct Student arr[],int count,const char* id_to_se
 }
 struct Student* search_by_name(struct Student arr[],int count,const char* name_to_search){
     for(int i=0;i<count;i++){
-        if(strcmp(arr[i].id,name_to_search)==0){
+        if(strcmp(arr[i].name,name_to_search)==0){
             return &arr[i];
         }
     }
@@ -308,7 +334,7 @@ void search_data(struct Student arr[],int count){
                     result2->job_major
                 );
             }else{
-                printf("【失败】未找到该学号对应的毕业生信息!\n");
+                printf("【失败】未找到该姓名对应的毕业生信息!\n");
             }
             break;
         }
@@ -371,11 +397,11 @@ void add_data(struct Student arr[], int *count) {
         return;
     }
 
-    // 枚举解析（假定这些函数返回 -1 表示无效）
-    int g = str_to_enum_gender(temp_gender);
-    int deg = str_to_enum_degree(temp_degree);
-    int car = str_to_enum_career(temp_career);
-    if (g == -1 || deg == -1 || car == -1) {
+    // 枚举解析（假定这些函数返回 0 表示无效）
+    int g = str_to_enum_gender(temp_gender,&arr[*count].gender);
+    int deg = str_to_enum_degree(temp_degree,&arr[*count].degree);
+    int car = str_to_enum_career(temp_career,&arr[*count].career);
+    if (g == 0 || deg == 0 || car == 0) {
         printf("【警告】枚举字段内容错误，跳过该条记录: %s\n", line);
         return;
     }
@@ -400,7 +426,7 @@ void add_data(struct Student arr[], int *count) {
     (*count)++;
 
     // 追加到文件
-    FILE *out = fopen("students.dat", "wb");
+    FILE *out = fopen("students.dat", "ab");
     if (!out) {
         printf("【警告】无法打开文件 students.dat 以写入！\n");
         return;
@@ -423,16 +449,15 @@ int check_dulicate_by_name(struct Student arr[],int count,const char*name_to_che
     }
     return flag;
 }
-    
 int delete_data(struct Student arr[], int *count,int delete_choice,const char *delete_key) {
     int idx=-1;
     for(int i=0;i<*count;i++){
-        if(delete_choice==0){
+        if(delete_choice==1){
             if(strcmp(arr[i].id,delete_key)==0){
                 idx=i;
                 break;
             }
-        }else if(delete_choice==1){
+        }else if(delete_choice==2){
             if(strcmp(arr[i].name,delete_key)==0){
                 idx=i;
                 break;
@@ -459,38 +484,40 @@ int delete_data(struct Student arr[], int *count,int delete_choice,const char *d
             );
         printf("【提示】确定要删除该毕业生信息吗？(是/否)\n");
         char confirm[10];
-        getchar();
         scanf("%s",confirm);
         while(strcmp(confirm,"是")!=0&&strcmp(confirm,"否")!=0){
             printf("【警告】无效的确认选项!重新输入!\n");
             scanf("%s",confirm);
         }
-        if(strcmp(confirm,"是")==0){
-            for(int j=idx;j<*count-1;j++){
-                arr[j]=arr[j+1];
-            }
-            (*count)--;
-            FILE *out=fopen("students.dat","wb");
-            if(out==NULL){
-                printf("【警告】无法打开文件!\n");
-                exit(0);
-            }else{
-                size_t write_count=fwrite(arr,sizeof(struct Student),*count,out);
-                fclose(out);
-                if(write_count==(size_t)*count){
-                    return 1;
-                }else{
-                    return 0;
-                }
-            }
-        }else if(strcmp(confirm,"否")==0){
+        if(strcmp(confirm,"否")==0){
             return 0;
         }
+        for(int j=idx;j<*count-1;j++){
+            arr[j]=arr[j+1];
+        }
+        (*count)--;
+        FILE *out = fopen("students.dat", "wb");
+        if(!out){
+            printf("【警告】无法打开文件!\n");
+            return 0;
+        }
+        size_t write_count=fwrite(arr,sizeof(struct Student),*count,out);
+        fclose(out);
+        if(write_count==(size_t)*count) return 1;
+        else return 0;
     }
+    return 0;
 }
 int main(){
+    int current_count=0;
     struct Student stu[MAXN];
-    int current_count=0;    
+    load_data(stu,&current_count);
+    if(current_count==0){
+        import_data_from_txt(stu,&current_count);
+        save_data_to_dat(stu,current_count);
+    }else{
+        printf("【提示】当前已存在%d条数据!\n",current_count);
+    }
     while(1){
         menu_main();
         int number1=0;
@@ -498,7 +525,8 @@ int main(){
         getchar();
         switch(number1){
             case import:
-            import_data(stu,&current_count);
+            import_data_from_txt(stu,&current_count);
+            save_data_to_dat(stu,current_count);
             break;
             case view:
             view_data(stu,current_count);
@@ -517,7 +545,7 @@ int main(){
                 int delete_choice = 0;
                 scanf("%d", &delete_choice);
                 getchar();
-                while(delete_choice!=0&&delete_choice!=1){
+                while(delete_choice!=1&&delete_choice!=2){
                     printf("【警告】无效的删除选项!重新输入!\n");
                     printf("1.按学号删除\n");
                     printf("2.按姓名删除\n");
@@ -528,7 +556,7 @@ int main(){
                 printf("请输入要删除的关键字:\n");
                 char key[64];
                 scanf("%s", key);
-                if(delete_choice==1){
+                if(delete_choice==2){
                     while(check_dulicate_by_name(stu,current_count,key)==0){
                         printf("【警告】未找到该姓名对应的毕业生信息,请重新输入!\n");
                         scanf("%s", key);
@@ -536,15 +564,15 @@ int main(){
                     if(check_dulicate_by_name(stu,current_count,key)>1){
                         printf("【警告】找到多个该姓名的毕业生信息,请重新输入学号进行删除!\n");
                         scanf("%s", key);
-                        delete_choice=0;
+                        delete_choice=1;
                     }
                 }
                 int delete_result=-1;
-                if(delete_choice==0){
-                    delete_result=delete_data(stu,&current_count,0,key);
-                }
-                else if(delete_choice==1){
+                if(delete_choice==1){
                     delete_result=delete_data(stu,&current_count,1,key);
+                }
+                else if(delete_choice==2){
+                    delete_result=delete_data(stu,&current_count,2,key);
                 }
                 if(delete_result==1){
                     printf("【成功】删除该毕业生信息!\n");
@@ -589,7 +617,9 @@ int main(){
                             strcpy(stu[i].name,modify_value);
                         }
                         else if(strcmp(modify_key,"性别")==0){
-                            stu[i].gender=str_to_enum_gender(modify_value);
+                            if(!str_to_enum_gender(modify_value,&stu[i].gender)){
+                                printf("【警告】无效的性别选项:%s\n",modify_value);
+                            }
                         }
                         else if(strcmp(modify_key,"出生日期")==0){
                             sscanf(modify_value,"%d/%d/%d",&stu[i].bd.year,&stu[i].bd.month,&stu[i].bd.day);
@@ -601,13 +631,17 @@ int main(){
                             stu[i].graduation_year=atoi(modify_value);
                         }
                         else if(strcmp(modify_key,"学历")==0){
-                            stu[i].degree=str_to_enum_degree(modify_value);
+                            if(!str_to_enum_degree(modify_value,&stu[i].degree)){
+                                printf("【警告】无效的学历选项:%s\n",modify_value);
+                            }
                         }
                         else if(strcmp(modify_key,"专业")==0){
                             strcpy(stu[i].major,modify_value);
                         }
                         else if(strcmp(modify_key,"就业去向")==0){
-                            stu[i].career=str_to_enum_career(modify_value);
+                            if(!str_to_enum_career(modify_value,&stu[i].career)){
+                                printf("【警告】无效的就业去向选项:%s\n",modify_value);
+                            }
                         }
                         else if(strcmp(modify_key,"单位名称")==0){
                             strcpy(stu[i].employer,modify_value);
@@ -618,18 +652,29 @@ int main(){
                             printf("【警告】无效的修改选项!\n");
                         }
                         printf("【成功】修改该毕业生就业信息!\n");
+                    }else{
+                        printf("【失败】未找到该学号对应的毕业生就业信息!\n");
                     }
-                    FILE *out=fopen("students.dat","wb");
-                    if(out==NULL){
-                        printf("【警告】无法打开文件!\n");
-                        exit(0);
-                    }
-                    }
+                }
+                FILE *out=fopen("students.dat","wb");
+                if(out==NULL){
+                    printf("【警告】无法打开文件写回!\n");
+                    break;
+                }
+                size_t write_count=fwrite(stu,sizeof(struct Student),current_count,out);
+                if(write_count!=(size_t)current_count){
+                    printf("【警告】写入文件时出错!\n");
+                }else{
+                    printf("【成功】修改成功，已更新数据文件students.dat!\n");
+                }
+                fclose(out);
             }
             break;
-            case quit:
+            case quit:{
                 printf("==========退出系统==========\n");
-                return 0;break;
+                return 0;
+            }
+            break;
             default:printf("【警告】无效的选项!\n");
         };
     }
