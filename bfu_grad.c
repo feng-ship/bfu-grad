@@ -575,8 +575,9 @@ void count_by_major(struct Student arr[],int count,int year){
         int idx=find_major(arr[i].major,ma,m_count);
         if(idx==-1){
             strcpy(ma[m_count].major,arr[i].major);
-            ma[m_count].total=1;
-            ma[m_count].employed=is_employed(arr[i].career);
+            ma[m_count].total=0;
+            ma[m_count].employed=0;
+            idx=m_count;
             m_count++;
         }
         ma[idx].total++;
@@ -641,7 +642,8 @@ void count_by_job_major(struct Student arr[],int count,int year){
         int idx=find_job_major(arr[i].job_major,j,job_count);
         if(idx==-1){
             strcpy(j[job_count].job_major,arr[i].job_major);
-            j[job_count].total++;
+            j[job_count].total=0;
+            idx=job_count;
             job_count++;
         }
         j[idx].total++;
