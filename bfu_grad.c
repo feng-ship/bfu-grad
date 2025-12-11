@@ -45,6 +45,15 @@ struct Student{
     char employer[128];
     char job_major[128];
 };
+struct Major{
+    char major[128];
+    int total;
+    int employed;
+};
+struct Job{
+    char job_major[128];
+    int total;
+};
 void load_data(struct Student arr[],int *count){
     FILE *in;
     if((in=fopen("students.dat","rb"))==NULL){
@@ -508,6 +517,198 @@ int delete_data(struct Student arr[], int *count,int delete_choice,const char *d
     }
     return 0;
 }
+void count_menu(){
+    printf("==========信息学院(人工智能学院)毕业生就业去向管理系统-统计功能==========\n");
+    printf("%d.统计某一年份就业率\n",count_year);
+    printf("%d.统计某一年份不同学历就业率\n",count_degree);
+    printf("%d.统计某一年份不同毕业专业就业率\n",count_major);
+    printf("%d.统计某一年份不同就业方向人数和比例\n",count_directions);
+    printf("%d.统计某一年份从事不同专业的人数和比例\n",count_job_major);
+    printf("%d.返回上级菜单\n",count_return);
+    printf("请选择功能编号:\n");
+}
+void count_data_by_year(struct Student arr[], int count, int year) {
+    int point=0;
+    double ans=0;
+    for(int i=0;i<count;i++){
+        if(arr[i].graduation_year==year&&arr[i].career!=未就业&&arr[i].career!=其他&&arr[i].career!=二战){
+            point++;
+        }
+    }
+    ans=(double)point/count*100.0;
+    printf("【成功】%d年就业率:%.4f%%\n",year,ans);
+}
+void count_by_degree(struct Student arr[],int count,int year){
+    int point[4]={0};
+    double ans[4];
+    for(int i=0;i<count;i++){
+        if(arr[i].graduation_year==year&&arr[i].career!=未就业&&arr[i].career!=其他&&arr[i].career!=二战){
+            if(arr[i].degree==本科生) point[0]++;
+            else if(arr[i].degree==硕士研究生) point[1]++;
+            else if(arr[i].degree==博士研究生) point[2]++;
+        }
+    }
+    ans[0]=(double)point[0]/count*100.0;
+    ans[1]=(double)point[1]/count*100.0;
+    ans[2]=(double)point[2]/count*100.0;
+    printf("【成功】%d年就业率:\n",year);
+    printf("本科:%.4f%%\n",ans[0]);
+    printf("硕士:%.4f%%\n",ans[1]);
+    printf("博士:%.4f%%\n",ans[2]);
+}
+int is_employed(enum Career c){
+    return !(c==未就业&&c!=其他&&c!=二战);
+}
+int find_major(const char* major,struct Major m[],int n){
+    for(int i=0;i<n;i++){
+        if(strcmp(m[i].major,major)==0){
+            return i;
+        }
+    }
+    return -1;
+}
+void count_by_major(struct Student arr[],int count,int year){
+    struct Major ma[MAXN];
+    int m_count=0;
+    for(int i=0;i<count;i++){
+        if(arr[i].graduation_year!=year) continue;
+        int idx=find_major(arr[i].major,ma,m_count);
+        if(idx==-1){
+            strcpy(ma[m_count].major,arr[i].major);
+            ma[m_count].total=1;
+            ma[m_count].employed=is_employed(arr[i].career);
+            m_count++;
+        }
+        ma[idx].total++;
+        if(is_employed(arr[i].career)) ma[idx].employed++;
+    }
+    printf("====== %d 年不同专业就业率 ======\n",year);
+    for(int i=0;i<m_count;i++){
+        double ans=(double)ma[i].employed*100.0/ma[i].total;
+        printf("专业:%-20s  就业率:%.4f%%\n",ma[i].major,ans);
+    }
+}
+void count_by_career(struct Student arr[],int count,int year){
+    int point[11]={0};
+    double ans[11];
+    for(int i=0;i<count;i++){
+        if(arr[i].graduation_year==year&&arr[i].career!=未就业&&arr[i].career!=其他&&arr[i].career!=二战){
+            if(arr[i].career==直接工作) point[0]++;
+            else if(arr[i].career==公务员) point[1]++;
+            else if(arr[i].career==国内读硕) point[2]++;
+            else if(arr[i].career==出国读硕) point[3]++;
+            else if(arr[i].career==国内读博) point[4]++;
+            else if(arr[i].career==国外读博) point[5]++;
+            else if(arr[i].career==二学位) point[6]++;
+            else if(arr[i].career==未就业) point[7]++;
+            else if(arr[i].career==其他) point[8]++;
+        }
+    }
+    ans[0]=(double)point[0]/count*100.0;
+    ans[1]=(double)point[1]/count*100.0;
+    ans[2]=(double)point[2]/count*100.0;
+    ans[3]=(double)point[3]/count*100.0;
+    ans[4]=(double)point[4]/count*100.0;
+    ans[5]=(double)point[5]/count*100.0;
+    ans[6]=(double)point[6]/count*100.0;
+    ans[7]=(double)point[7]/count*100.0;
+    ans[8]=(double)point[8]/count*100.0;
+    printf("【成功】%d年不同就业方向人数和比例:\n",year);
+    printf("直接工作:人数:%d 比例:%.4f%%\n",point[0],ans[0]);
+    printf("公务员:人数:%d 比例:%.4f%%\n",point[1],ans[1]);
+    printf("国内读硕:人数:%d 比例:%.4f%%\n",point[2],ans[2]);
+    printf("出国读硕:人数:%d 比例:%.4f%%\n",point[3],ans[3]);
+    printf("国内读博:人数:%d 比例:%.4f%%\n",point[4],ans[4]);
+    printf("国外读博:人数:%d 比例:%.4f%%\n",point[5],ans[5]);
+    printf("二战:人数:%d 比例:%.4f%%\n",point[5],ans[5]);
+    printf("二学位:人数:%d 比例:%.4f%%\n",point[6],ans[6]);
+    printf("未就业:人数:%d 比例:%.4f%%\n",point[7],ans[7]);
+    printf("其他:人数:%d 比例:%.4f%%\n",point[8],ans[8]);
+}
+int find_job_major(const char* j_major,struct Job j[],int n){
+    for(int i=0;i<n;i++){
+        if(strcmp(j[i].job_major,j_major)==0) {
+            return i;
+        }
+    }
+    return -1;
+}
+void count_by_job_major(struct Student arr[],int count,int year){
+    struct Job j[100];
+    int job_count=0;
+    for(int i=0;i<count;i++){
+        if(arr[i].graduation_year!=year) continue;
+        int idx=find_job_major(arr[i].job_major,j,job_count);
+        if(idx==-1){
+            strcpy(j[job_count].job_major,arr[i].job_major);
+            j[job_count].total++;
+            job_count++;
+        }
+        j[idx].total++;
+    }
+    printf("====== %d 年从事不同专业的人数和比例 ======\n",year);
+    for(int i=0;i<job_count;i++){
+        printf("专业:%-20s 人数:%d 比例:%.4f%%\n",j[i].job_major,j[i].total,j[i].total*100.0/count);
+    }
+}
+void count_menu_loop(struct Student arr[],int count){
+    int number2;
+    while(1){
+        count_menu();
+        if(scanf("%d",&number2)!=1){
+            int ch;
+            while((ch=getchar())!=EOF&&ch!='\n');
+            printf("【警告】输入不是数字，请重试。\n");
+            continue;
+        }
+        switch(number2){
+            case count_year:{
+                printf("请输入要统计的年份:\n");
+                int year1=0;
+                scanf("%d",&year1);
+                count_data_by_year(arr,count,year1);
+            }
+            break;
+            case count_degree:{
+                printf("请输入要统计的年份:\n");
+                int year1=0;
+                scanf("%d",&year1);
+                count_by_degree(arr,count,year1);
+            }
+            break;
+            case count_major:{
+                printf("请输入要统计的年份:\n");
+                int year1=0;
+                scanf("%d",&year1);
+                count_by_major(arr,count,year1);
+            }
+            break;
+            case count_directions:{
+                printf("请输入要统计的年份:\n");
+                int year1=0;
+                scanf("%d",&year1);
+                count_by_career(arr,count,year1);
+            }
+            break;
+            case count_job_major:{
+                printf("请输入要统计的年份:\n");
+                int year1=0;
+                scanf("%d",&year1);
+                count_by_job_major(arr,count,year1);
+            }
+            break;
+            case count_return:{
+                return;
+            }
+            break;
+            default:printf("【警告】无效的选项!\n");
+        }
+        printf("\n按回车继续...\n");
+        int ch;
+        while ((ch = getchar()) != '\n' && ch != EOF) {} 
+        getchar();
+    }
+}
 int main(){
     int current_count=0;
     struct Student stu[MAXN];
@@ -670,6 +871,9 @@ int main(){
                 fclose(out);
             }
             break;
+            case count:{
+                count_menu_loop(stu,current_count);
+            }break;
             case quit:{
                 printf("==========退出系统==========\n");
                 return 0;
