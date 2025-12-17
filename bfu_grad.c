@@ -1,7 +1,9 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#define MAXN 100
+#include <wchar.h>
+#include <locale.h>
+#define MAXN 1000
 enum Gender{F,M};
 enum Degree{本科生=1,硕士研究生=2,博士研究生=3};
 enum Career{直接工作=1,公务员=2,国内读硕,出国读硕,国内读博,国外读博,二战,二学位,未就业,其他};
@@ -163,6 +165,9 @@ int check_dulicate_by_id(struct Student arr[],int count,const char* id_to_check)
     }
     return 0;
 }
+int is_runnian(int year){
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+}
 void import_data_from_txt(struct Student arr[],int *count){
     struct Student temp[MAXN];
     FILE *in;
@@ -178,7 +183,7 @@ void import_data_from_txt(struct Student arr[],int *count){
     while(fgets(line,sizeof(line),in)){
         line[strcspn(line,"\n")]=0;
         if(strlen(line)==0) continue;
-        int scanned_items = sscanf(line,"%31[^,],%63[^,],%15[^,],%d/%d/%d,%d,%d,%31[^,],%127[^,],%31[^,],%127[^,],%63[^\n]",
+        int scanned_items = sscanf(line,"%31[^,],%63[^,],%15[^,],%d/%d/%d,%d,%d,%31[^,],%127[^,],%31[^,],%127[^,],%63[^,\n]",
             temp_id,
             temp[*count].name,
             temp_gender,
@@ -202,6 +207,22 @@ void import_data_from_txt(struct Student arr[],int *count){
         if(*count>=MAXN){
             printf("【警告】已达到最大容量,停止导入!\n");
             continue;
+        }
+        if(temp[*count].enroll_year>temp[*count].graduation_year){
+            printf("【警告】入学年大于毕业年,与实际不符,跳过该条记录:%s!\n",line);
+            continue;
+        }
+        if(temp[*count].bd.month>12||temp[*count].bd.month<1||temp[*count].bd.day<1||temp[*count].bd.day>31){
+            printf("【警告】日期不合法,跳过该条记录:%s!\n",line);
+            continue;
+        }
+        if(is_runnian(temp[*count].bd.year)){
+            if(temp[*count].bd.month==2){
+                if(temp[*count].bd.day>29||temp[*count].bd.day<1){
+                    printf("【警告】日期不合法,跳过该条记录:%s!\n",line);
+                    continue;
+                }
+            }
         }
         strcpy(arr[*count].id,temp_id);
         strcpy(arr[*count].name,temp[*count].name);
@@ -244,30 +265,198 @@ void save_data_to_dat(struct Student arr[],int count){
         return;
     }
 }
+int display_width(const char *s){
+    int w = 0;
+    while (*s){
+        unsigned char c = *s;
+        if (c >= 0x80){
+            w += 2;      // 中文显示宽度=2
+            s += 3;      // UTF-8 中文占 3 字节
+        } else {
+            w += 1;
+            s++;
+        }
+    }
+    return w;
+}
+void print_cell(const char *s, int width){
+    int w = display_width(s);
+    printf("%s", s);
+    for(int i = 0; i < width - w; i++){
+        putchar(' ');
+    }
+}
+void view_table_simple(struct Student arr[], int count){
+    const char* headers[] = {
+        "学号","姓名","性别","出生日期","入学年","毕业年",
+        "学历","专业","就业去向","单位名称","从事专业"
+    };
+
+    const int cols = 11;
+    int widths[cols] = {0};
+
+    // 初始：列宽 = 表头宽度
+    for(int i = 0; i < cols; i++){
+        widths[i] = display_width(headers[i]);
+    }
+
+    char buf[128];
+
+    // 扫描所有数据，取最大宽度
+    for(int i = 0; i < count; i++){
+        int w;
+
+        // 学号
+        w = display_width(arr[i].id);
+        if(w > widths[0]) widths[0] = w;
+
+        // 姓名
+        w = display_width(arr[i].name);
+        if(w > widths[1]) widths[1] = w;
+
+        // 性别
+        w = display_width(arr[i].gender==F?"女":"男");
+        if(w > widths[2]) widths[2] = w;
+
+        // 出生日期
+        sprintf(buf,"%04d/%02d/%02d",arr[i].bd.year,arr[i].bd.month,arr[i].bd.day);
+        w = display_width(buf);
+        if(w > widths[3]) widths[3] = w;
+
+        // 入学年与毕业年
+        sprintf(buf,"%d",arr[i].enroll_year);
+        if(display_width(buf) > widths[4]) widths[4] = display_width(buf);
+
+        sprintf(buf,"%d",arr[i].graduation_year);
+        if(display_width(buf) > widths[5]) widths[5] = display_width(buf);
+
+        // 学历
+        const char* deg = arr[i].degree==本科生?"本科生":
+                          arr[i].degree==硕士研究生?"硕士研究生":
+                          "博士研究生";
+        if(display_width(deg) > widths[6]) widths[6] = display_width(deg);
+
+        // 专业
+        if(display_width(arr[i].major) > widths[7]) widths[7] = display_width(arr[i].major);
+
+        // 就业去向
+        const char* car = arr[i].career==直接工作?"直接工作":
+                          arr[i].career==公务员?"公务员":
+                          arr[i].career==国内读硕?"国内读硕":
+                          arr[i].career==出国读硕?"出国读硕":
+                          arr[i].career==国内读博?"国内读博":
+                          arr[i].career==国外读博?"国外读博":
+                          arr[i].career==二战?"二战":
+                          arr[i].career==二学位?"二学位":
+                          arr[i].career==未就业?"未就业":"其他";
+        if(display_width(car) > widths[8]) widths[8] = display_width(car);
+
+        // 单位名称
+        if(display_width(arr[i].employer) > widths[9]) widths[9] = display_width(arr[i].employer);
+
+        // 从事专业
+        if(display_width(arr[i].job_major) > widths[10]) widths[10] = display_width(arr[i].job_major);
+    }
+
+    // 多加一点空格看起来更舒服
+    for(int i = 0; i < cols; i++) widths[i] += 2;
+
+    // 计算整行总宽度（输出框线）
+    int total = 0;
+    for(int i = 0; i < cols; i++) total += widths[i];
+    
+    // 顶部框线
+    for(int i = 0; i < total; i++) putchar('=');
+    putchar('\n');
+
+    // 表头
+    for(int i = 0; i < cols; i++){
+        print_cell(headers[i], widths[i]);
+    }
+    putchar('\n');
+
+    // 分隔线
+    for(int i = 0; i < total; i++) putchar('-');
+    putchar('\n');
+
+    // 数据行
+    for(int i = 0; i < count; i++){
+
+        sprintf(buf,"%s", arr[i].id);
+        print_cell(buf, widths[0]);
+
+        print_cell(arr[i].name, widths[1]);
+        print_cell(arr[i].gender==F?"女":"男", widths[2]);
+
+        sprintf(buf,"%04d/%02d/%02d",arr[i].bd.year,arr[i].bd.month,arr[i].bd.day);
+        print_cell(buf, widths[3]);
+
+        sprintf(buf,"%d",arr[i].enroll_year);
+        print_cell(buf, widths[4]);
+
+        sprintf(buf,"%d",arr[i].graduation_year);
+        print_cell(buf, widths[5]);
+
+        const char* deg = arr[i].degree==本科生?"本科生":
+                          arr[i].degree==硕士研究生?"硕士研究生":"博士研究生";
+        print_cell(deg, widths[6]);
+
+        print_cell(arr[i].major, widths[7]);
+
+        const char* car = arr[i].career==直接工作?"直接工作":
+                          arr[i].career==公务员?"公务员":
+                          arr[i].career==国内读硕?"国内读硕":
+                          arr[i].career==出国读硕?"出国读硕":
+                          arr[i].career==国内读博?"国内读博":
+                          arr[i].career==国外读博?"国外读博":
+                          arr[i].career==二战?"二战":
+                          arr[i].career==二学位?"二学位":
+                          arr[i].career==未就业?"未就业":"其他";
+        print_cell(car, widths[8]);
+
+        print_cell(arr[i].employer, widths[9]);
+        print_cell(arr[i].job_major, widths[10]);
+
+        putchar('\n');
+    }
+
+    // 底部框线
+    for(int i = 0; i < total; i++) putchar('=');
+    putchar('\n');
+}
 void view_data(struct Student arr[],int count){
     printf("==========浏览毕业生就业信息==========\n");
     if(count==0){
         printf("【提示】当前无数据可浏览,请先导入或添加数据!\n");
         return;
     }
-    printf("%-12s %-8s %-4s %-12s %-8s %-8s %-10s %-18s %-18s %-20s %-18s\n",
-       "学号","姓名","性别","出生日期","入学年","毕业年",
-       "学历","专业","就业去向","单位名称","从事专业");
-    for(int i=0;i<count;i++){
-        printf("%-12s %-8s %-4s %04d/%02d/%02d %-8d %-8d %-12s %-16s %-16s %-16s %-16s\n",
-            arr[i].id,
-            arr[i].name,
-            arr[i].gender==F?"女":"男",
-            arr[i].bd.year,arr[i].bd.month,arr[i].bd.day,
-            arr[i].enroll_year,
-            arr[i].graduation_year,
-            arr[i].degree==本科生?"本科生":arr[i].degree==硕士研究生?"硕士研究生":"博士研究生",
-            arr[i].major,
-            arr[i].career==直接工作?"直接工作":arr[i].career==公务员?"公务员":arr[i].career==国内读硕?"国内读硕":arr[i].career==出国读硕?"出国读硕":arr[i].career==国内读博?"国内读博":arr[i].career==国外读博?"国外读博":arr[i].career==二战?"二战":arr[i].career==二学位?"二学位":arr[i].career==未就业?"未就业":"其他",
-            arr[i].employer,
-            arr[i].job_major
-        );
-    }
+    view_table_simple(arr,count);
+}
+void show_student_row(struct Student s){
+    printf("===============================================================================================================================\n");
+    printf("| %-10s | %-6s | %-2s | %04d/%02d/%02d | %-4d | %-4d | %-6s | %-12s | %-10s | %-15s | %-15s |\n",
+        s.id,
+        s.name,
+        s.gender==F?"女":"男",
+        s.bd.year, s.bd.month, s.bd.day,
+        s.enroll_year,
+        s.graduation_year,
+        s.degree==本科生?"本科":
+        s.degree==硕士研究生?"硕士":"博士",
+        s.major,
+        s.career==直接工作?"工作":
+        s.career==公务员?"公务员":
+        s.career==国内读硕?"国内读硕":
+        s.career==出国读硕?"出国读硕":
+        s.career==国内读博?"国内读博":
+        s.career==国外读博?"国外读博":
+        s.career==二战?"二战":
+        s.career==二学位?"二学位":
+        s.career==未就业?"未就业":"其他",
+        s.employer,
+        s.job_major
+    );
+    printf("===============================================================================================================================\n");
 }
 struct Student* search_by_id(struct Student arr[],int count,const char* id_to_search){
     for(int i=0;i<count;i++){
@@ -300,21 +489,7 @@ void search_data(struct Student arr[],int count){
             struct Student* result=search_by_id(arr,count,id_to_search);
             if(result!=NULL){
                 printf("【成功】找到该毕业生信息:\n");
-                printf("%-12s %-8s %-4s %-12s %-8s %-8s %-10s %-18s %-18s %-20s %-18s\n",
-       "学号","姓名","性别","出生日期","入学年","毕业年",
-       "学历","专业","就业去向","单位名称","从事专业");
-                printf("%-12s %-8s %-4s %04d/%02d/%02d %-8d %-8d %-12s %-16s %-16s %-16s %-16s\n",
-                    result->id,
-                    result->name,result->gender==F?"女":"男",
-                    result->bd.year,result->bd.month,result->bd.day,
-                    result->enroll_year,
-                    result->graduation_year,
-                    result->degree==本科生?"本科生":result->degree==硕士研究生?"硕士研究生":"博士研究生",
-                    result->major,
-                    result->career==直接工作?"直接工作":result->career==公务员?"公务员":result->career==国内读硕?"国内读硕":result->career==出国读硕?"出国读硕":result->career==国内读博?"国内读博":result->career==国外读博?"国外读博":result->career==二战?"二战":result->career==二学位?"二学位":result->career==未就业?"未就业":"其他",
-                    result->employer,
-                    result->job_major
-                );
+                show_student_row(*result);
             }else{
                 printf("【失败】未找到该学号对应的毕业生信息!\n");
             }
@@ -327,21 +502,7 @@ void search_data(struct Student arr[],int count){
             struct Student* result2=search_by_name(arr,count,name_to_search);
             if(result2!=NULL){
                 printf("【成功】找到该毕业生信息:\n");
-                printf("%-12s %-8s %-4s %-12s %-8s %-8s %-10s %-18s %-18s %-20s %-18s\n",
-                    "学号","姓名","性别","出生日期","入学年","毕业年",
-                    "学历","专业","就业去向","单位名称","从事专业");
-                printf("%-12s %-8s %-4s %04d/%02d/%02d %-8d %-8d %-12s %-16s %-16s %-16s %-16s\n",
-                    result2->id,
-                    result2->name,result2->gender==F?"女":"男",
-                    result2->bd.year,result2->bd.month,result2->bd.day,
-                    result2->enroll_year,
-                    result2->graduation_year,
-                    result2->degree==本科生?"本科生":result2->degree==硕士研究生?"硕士研究生":"博士研究生",
-                    result2->major,
-                    result2->career==直接工作?"直接工作":result2->career==公务员?"公务员":result2->career==国内读硕?"国内读硕":result2->career==出国读硕?"出国读硕":result2->career==国内读博?"国内读博":result2->career==国外读博?"国外读博":result2->career==二战?"二战":result2->career==二学位?"二学位":result2->career==未就业?"未就业":"其他",
-                    result2->employer,
-                    result2->job_major
-                );
+                show_student_row(*result2);
             }else{
                 printf("【失败】未找到该姓名对应的毕业生信息!\n");
             }
@@ -389,7 +550,7 @@ void add_data(struct Student arr[], int *count) {
 
     // 注意：这里的数字要与上面缓冲大小匹配（比如 %63 -> temp_name[64]）
     int n = sscanf(line,
-        "%31[^,],%63[^,],%15[^,],%d/%d/%d,%d,%d,%31[^,],%127[^,],%31[^,],%127[^,],%63[^\n]",
+        "%31[^,],%63[^,],%15[^,],%d/%d/%d,%d,%d,%31[^,],%127[^,],%31[^,],%127[^,],%63[^,]",
         temp_id, temp_name, temp_gender,
         &y, &m, &d, &enroll, &grad,
         temp_degree, temp_major, temp_career, temp_employer, temp_job_major
@@ -406,7 +567,7 @@ void add_data(struct Student arr[], int *count) {
         return;
     }
 
-    // 枚举解析（假定这些函数返回 0 表示无效）
+    // 枚举解析
     int g = str_to_enum_gender(temp_gender,&arr[*count].gender);
     int deg = str_to_enum_degree(temp_degree,&arr[*count].degree);
     int car = str_to_enum_career(temp_career,&arr[*count].career);
@@ -476,21 +637,7 @@ int delete_data(struct Student arr[], int *count,int delete_choice,const char *d
     if(idx==-1) return 0;
     else{
         printf("【提示】该毕业生信息:\n");
-        printf("%-12s %-8s %-4s %-12s %-8s %-8s %-10s %-18s %-18s %-20s %-18s\n",
-       "学号","姓名","性别","出生日期","入学年","毕业年",
-       "学历","专业","就业去向","单位名称","从事专业");
-        printf("%-12s %-8s %-4s %04d/%02d/%02d %-8d %-8d %-12s %-16s %-16s %-16s %-16s\n",
-            arr[idx].id,
-            arr[idx].name,arr[idx].gender==F?"女":"男",
-            arr[idx].bd.year,arr[idx].bd.month,arr[idx].bd.day,
-            arr[idx].enroll_year,
-            arr[idx].graduation_year,
-            arr[idx].degree==本科生?"本科生":arr[idx].degree==硕士研究生?"硕士研究生":"博士研究生",
-            arr[idx].major,
-            arr[idx].career==直接工作?"直接工作":arr[idx].career==公务员?"公务员":arr[idx].career==国内读硕?"国内读硕":arr[idx].career==出国读硕?"出国读硕":arr[idx].career==国内读博?"国内读博":arr[idx].career==国外读博?"国外读博":arr[idx].career==二战?"二战":arr[idx].career==二学位?"二学位":arr[idx].career==未就业?"未就业":"其他",
-            arr[idx].employer,
-            arr[idx].job_major
-            );
+        show_student_row(arr[idx]);
         printf("【提示】确定要删除该毕业生信息吗？(是/否)\n");
         char confirm[10];
         scanf("%s",confirm);
@@ -517,6 +664,98 @@ int delete_data(struct Student arr[], int *count,int delete_choice,const char *d
     }
     return 0;
 }
+void modify_student(struct Student stu[], int current_count){
+    printf("==========修改毕业生就业信息==========\n");
+    printf("请输入需要修改的毕业生学号:\n");
+    char modify_id[32];
+    scanf("%s", modify_id);
+    getchar();
+    // 查找
+    int i = -1;
+    for(int k=0;k<current_count;k++){
+        if(strcmp(stu[k].id, modify_id) == 0){
+            i = k;
+            break;
+        }
+    }
+    if(i == -1){
+        printf("【失败】未找到该学号对应的毕业生就业信息!\n");
+        return;
+    }
+    // 展示当前信息
+    printf("\n【提示】该毕业生就业信息如下：\n");
+    show_student_row(stu[i]);
+    // 字段菜单
+    printf("\n请选择需要修改的字段编号：\n");
+    printf("1. 姓名\n");
+    printf("2. 性别\n");
+    printf("3. 出生日期\n");
+    printf("4. 入学年\n");
+    printf("5. 毕业年\n");
+    printf("6. 学历\n");
+    printf("7. 专业\n");
+    printf("8. 就业去向\n");
+    printf("9. 单位名称\n");
+    printf("10. 从事专业\n");
+    printf("0. 返回上级\n");
+    printf("请输入：");
+    int choice;
+    scanf("%d", &choice);
+    getchar();
+    if(choice == 0) return;
+    char buf[64];
+    printf("请输入新的值：\n");
+    scanf("%s", buf);
+    getchar();
+    switch(choice){
+        case 1:
+            strcpy(stu[i].name, buf);
+            break;
+        case 2:
+            if(!str_to_enum_gender(buf, &stu[i].gender))
+                printf("【警告】无效的性别选项！\n");
+            break;
+        case 3:
+            sscanf(buf, "%d/%d/%d",
+                   &stu[i].bd.year,&stu[i].bd.month,&stu[i].bd.day);
+            break;
+        case 4:
+            stu[i].enroll_year = atoi(buf);
+            break;
+        case 5:
+            stu[i].graduation_year = atoi(buf);
+            break;
+        case 6:
+            if(!str_to_enum_degree(buf, &stu[i].degree))
+                printf("【警告】无效的学历选项！\n");
+            break;
+        case 7:
+            strcpy(stu[i].major, buf);
+            break;
+        case 8:
+            if(!str_to_enum_career(buf, &stu[i].career))
+                printf("【警告】无效的就业去向选项！\n");
+            break;
+        case 9:
+            strcpy(stu[i].employer, buf);
+            break;
+        case 10:
+            strcpy(stu[i].job_major, buf);
+            break;
+        default:
+            printf("【警告】无效的选项！\n");
+            break;
+    }
+    // 写回文件
+    FILE *out = fopen("students.dat","wb");
+    if(!out){
+        printf("【警告】无法打开文件写回!\n");
+        return;
+    }
+    fwrite(stu, sizeof(struct Student), current_count, out);
+    fclose(out);
+    printf("【成功】修改完成，数据已写回 students.dat！\n");
+}
 void count_menu(){
     printf("==========信息学院(人工智能学院)毕业生就业去向管理系统-统计功能==========\n");
     printf("%d.统计某一年份就业率\n",count_year);
@@ -538,6 +777,14 @@ void count_data_by_year(struct Student arr[], int count, int year) {
     ans=(double)point/count*100.0;
     printf("【成功】%d年就业率:%.4f%%\n",year,ans);
 }
+void printf_data_degree(const char *label,int employed,int total,double *rate){
+    if(total==0){
+        printf("%s:无数据(%d人)\n",label,total);
+    }else{
+        *rate=employed*100.0/total;
+        printf("%s:%d/%d(%lf)\n",label,employed,total,*rate);
+    }
+}
 void count_by_degree(struct Student arr[],int count,int year){
     int point[4]={0};
     double ans[4];
@@ -548,16 +795,13 @@ void count_by_degree(struct Student arr[],int count,int year){
             else if(arr[i].degree==博士研究生) point[2]++;
         }
     }
-    ans[0]=(double)point[0]/count*100.0;
-    ans[1]=(double)point[1]/count*100.0;
-    ans[2]=(double)point[2]/count*100.0;
     printf("【成功】%d年就业率:\n",year);
-    printf("本科:%.4f%%\n",ans[0]);
-    printf("硕士:%.4f%%\n",ans[1]);
-    printf("博士:%.4f%%\n",ans[2]);
+    printf_data_degree("本科生",point[0],count,&ans[0]);
+    printf_data_degree("硕士研究生",point[1],count,&ans[1]);
+    printf_data_degree("博士研究生",point[2],count,&ans[2]);
 }
 int is_employed(enum Career c){
-    return !(c==未就业&&c!=其他&&c!=二战);
+    return !(c==未就业||c==其他||c==二战);
 }
 int find_major(const char* major,struct Major m[],int n){
     for(int i=0;i<n;i++){
@@ -785,92 +1029,7 @@ int main(){
             }
             break;
             case modify:{
-                printf("==========修改毕业生就业信息==========\n");
-                printf("请输入需要修改的毕业生学号:\n");
-                char modify_id[32];
-                scanf("%s",modify_id);
-                getchar();
-                for(int i=0;i<current_count;i++){
-                    if(strcmp(stu[i].id,modify_id)==0){
-                        printf("【提示】该毕业生就业信息:\n");
-                        printf("%-12s %-8s %-4s %-12s %-8s %-8s %-10s %-18s %-18s %-20s %-18s\n",
-                           "学号","姓名","性别","出生日期","入学年","毕业年",
-                           "学历","专业","就业去向","单位名称","从事专业");
-                        printf("%-12s %-8s %-4s %04d/%02d/%02d %-8d %-8d %-12s %-16s %-16s %-16s %-16s\n",
-                            stu[i].id,
-                            stu[i].name,stu[i].gender==F?"女":"男",
-                            stu[i].bd.year,stu[i].bd.month,stu[i].bd.day,
-                            stu[i].enroll_year,
-                            stu[i].graduation_year,
-                            stu[i].degree==本科生?"本科生":stu[i].degree==硕士研究生?"硕士研究生":"博士研究生",
-                            stu[i].major,
-                            stu[i].career==直接工作?"直接工作":stu[i].career==公务员?"公务员":stu[i].career==国内读硕?"国内读硕":stu[i].career==出国读硕?"出国读硕":stu[i].career==国内读博?"国内读博":stu[i].career==国外读博?"国外读博":stu[i].career==二战?"二战":stu[i].career==二学位?"二学位":stu[i].career==未就业?"未就业":"其他",
-                            stu[i].employer,
-                            stu[i].job_major
-                        );
-                        printf("请输入需要修改的关键字(姓名/性别/出生日期/入学年/毕业年/学历/专业/就业去向/单位名称/从事专业):\n");
-                        char modify_key[64];
-                        scanf("%s",modify_key);
-                        getchar();
-                        printf("请输入新的值:\n");
-                        char modify_value[64];
-                        scanf("%s",modify_value);
-                        getchar();
-                        if(strcmp(modify_key,"姓名")==0){
-                            strcpy(stu[i].name,modify_value);
-                        }
-                        else if(strcmp(modify_key,"性别")==0){
-                            if(!str_to_enum_gender(modify_value,&stu[i].gender)){
-                                printf("【警告】无效的性别选项:%s\n",modify_value);
-                            }
-                        }
-                        else if(strcmp(modify_key,"出生日期")==0){
-                            sscanf(modify_value,"%d/%d/%d",&stu[i].bd.year,&stu[i].bd.month,&stu[i].bd.day);
-                        }
-                        else if(strcmp(modify_key,"入学年")==0){
-                            stu[i].enroll_year=atoi(modify_value);
-                        }
-                        else if(strcmp(modify_key,"毕业年")==0){
-                            stu[i].graduation_year=atoi(modify_value);
-                        }
-                        else if(strcmp(modify_key,"学历")==0){
-                            if(!str_to_enum_degree(modify_value,&stu[i].degree)){
-                                printf("【警告】无效的学历选项:%s\n",modify_value);
-                            }
-                        }
-                        else if(strcmp(modify_key,"专业")==0){
-                            strcpy(stu[i].major,modify_value);
-                        }
-                        else if(strcmp(modify_key,"就业去向")==0){
-                            if(!str_to_enum_career(modify_value,&stu[i].career)){
-                                printf("【警告】无效的就业去向选项:%s\n",modify_value);
-                            }
-                        }
-                        else if(strcmp(modify_key,"单位名称")==0){
-                            strcpy(stu[i].employer,modify_value);
-                        }
-                        else if(strcmp(modify_key,"从事专业")==0){
-                            strcpy(stu[i].job_major,modify_value);
-                        }else{
-                            printf("【警告】无效的修改选项!\n");
-                        }
-                        printf("【成功】修改该毕业生就业信息!\n");
-                    }else{
-                        printf("【失败】未找到该学号对应的毕业生就业信息!\n");
-                    }
-                }
-                FILE *out=fopen("students.dat","wb");
-                if(out==NULL){
-                    printf("【警告】无法打开文件写回!\n");
-                    break;
-                }
-                size_t write_count=fwrite(stu,sizeof(struct Student),current_count,out);
-                if(write_count!=(size_t)current_count){
-                    printf("【警告】写入文件时出错!\n");
-                }else{
-                    printf("【成功】修改成功，已更新数据文件students.dat!\n");
-                }
-                fclose(out);
+                modify_student(stu,current_count);
             }
             break;
             case count:{
