@@ -165,8 +165,38 @@ int check_dulicate_by_id(struct Student arr[],int count,const char* id_to_check)
     }
     return 0;
 }
+int is_int(double x){
+    return x==(int)x;
+}
+int check_birthday_is_int(double year,double month,double day){
+    return(is_int(year)&&is_int(month)&&is_int(day));
+}
 int is_runnian(int year){
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+}
+int check_birthday(struct BirthDate s[],int n){
+    if(s[n].month>12||s[n].month<1||s[n].day<1||s[n].day>31){
+        return 0;
+    }
+    if(s[n].month==1||s[n].month==3||s[n].month==5||s[n].month==7||s[n].month==8||s[n].month==10||s[n].month==12){
+        if(s[n].day>31) return 0;
+    }
+    if(s[n].month==4||s[n].month==6||s[n].month==9||s[n].month==11){
+        if(s[n].day>30) return 0;
+    }
+    if(!is_runnian(s[n].year)){
+        if(s[n].month==2){
+            if(s[n].day>28) return 0;
+        }
+    }else{
+        if(s[n].month==2){
+            if(s[n].day>29) return 0;
+        }
+    }
+    return 1;
+}
+int check_enroll_grad(int enroll,int grad){
+    return (enroll<grad||enroll==grad);
 }
 void import_data_from_txt(struct Student arr[],int *count){
     struct Student temp[MAXN];
@@ -176,18 +206,18 @@ void import_data_from_txt(struct Student arr[],int *count){
         return;
     }
     char line[512];
-    char temp_id[32];
+    double temp_year,temp_month,temp_day;
     char temp_gender[16];
     char temp_degree[32];
     char temp_career[32];
     while(fgets(line,sizeof(line),in)){
         line[strcspn(line,"\n")]=0;
         if(strlen(line)==0) continue;
-        int scanned_items = sscanf(line,"%31[^,],%63[^,],%15[^,],%d/%d/%d,%d,%d,%31[^,],%127[^,],%31[^,],%127[^,],%63[^,\n]",
-            temp_id,
+        int scanned_items = sscanf(line,"%31[^,],%63[^,],%15[^,],%lf/%lf/%lf,%d,%d,%31[^,],%127[^,],%31[^,],%127[^,],%63[^,\n]",
+            temp[*count].id,
             temp[*count].name,
             temp_gender,
-            &temp[*count].bd.year,&temp[*count].bd.month,&temp[*count].bd.day,
+            &temp_year,&temp_month,&temp_day,
             &temp[*count].enroll_year,
             &temp[*count].graduation_year,
             temp_degree,
@@ -200,31 +230,31 @@ void import_data_from_txt(struct Student arr[],int *count){
             printf("【警告】数据格式错误，跳过该条记录: %s\n",line);
             continue;
         }
-        if(check_dulicate_by_id(arr,*count,temp_id)){
-            printf("【警告】毕业生学号%s已存在,跳过此毕业生!\n",temp_id);
+        if(check_dulicate_by_id(arr,*count, temp[*count].id)){
+            printf("【警告】毕业生学号%s已存在,跳过此毕业生!\n",temp[*count].id);
             continue;
         }
         if(*count>=MAXN){
             printf("【警告】已达到最大容量,停止导入!\n");
             continue;
         }
-        if(temp[*count].enroll_year>temp[*count].graduation_year){
+        if(!check_enroll_grad(temp[*count].enroll_year,temp[*count].graduation_year)){
             printf("【警告】入学年大于毕业年,与实际不符,跳过该条记录:%s!\n",line);
             continue;
         }
-        if(temp[*count].bd.month>12||temp[*count].bd.month<1||temp[*count].bd.day<1||temp[*count].bd.day>31){
+        if(!check_birthday_is_int(temp_year,temp_month,temp_day)){
+            printf("【警告】日期不为整数,跳过该条记录:%s!\n",line);
+            continue;
+        }else{
+            temp[*count].bd.year=temp_year;
+            temp[*count].bd.month=temp_month;
+            temp[*count].bd.day=temp_day;
+        }
+        if(!check_birthday(&temp[*count].bd,*count)){
             printf("【警告】日期不合法,跳过该条记录:%s!\n",line);
             continue;
         }
-        if(is_runnian(temp[*count].bd.year)){
-            if(temp[*count].bd.month==2){
-                if(temp[*count].bd.day>29||temp[*count].bd.day<1){
-                    printf("【警告】日期不合法,跳过该条记录:%s!\n",line);
-                    continue;
-                }
-            }
-        }
-        strcpy(arr[*count].id,temp_id);
+        strcpy(arr[*count].id,temp[*count].id);
         strcpy(arr[*count].name,temp[*count].name);
         arr[*count].bd.year=temp[*count].bd.year;
         arr[*count].bd.month=temp[*count].bd.month;
@@ -234,13 +264,12 @@ void import_data_from_txt(struct Student arr[],int *count){
         strcpy(arr[*count].major,temp[*count].major);
         strcpy(arr[*count].employer,temp[*count].employer);
         strcpy(arr[*count].job_major,temp[*count].job_major);
-        if(str_to_enum_gender(temp_gender,&arr[*count].gender)&&str_to_enum_degree(temp_degree,&arr[*count].degree)&&str_to_enum_career(temp_career,&arr[*count].career)){
-            *count+=1;
-        }
-        else{
-            printf("【警告】数据内容错误，跳过该条记录: %s",line);
+        if(!str_to_enum_gender(temp_gender,&temp[*count].gender)||!str_to_enum_degree(temp_degree,&temp[*count].degree)||!str_to_enum_career(temp_career,&temp[*count].career)){
+            printf("【警告】性别/学历/就业去向数据内容错误，跳过该条记录: %s",line);
             continue;
         }
+        arr[*count]=temp[*count];
+        (*count)++;
     }
     fclose(in);
 }
