@@ -1028,37 +1028,77 @@ void count_menu_loop(struct Student arr[],int count){
         }
         switch(number2){
             case count_year:{
-                printf("请输入要统计的年份:\n");
                 int year1=0;
-                scanf("%d",&year1);
+                while(1){
+                    printf("请输入要统计的年份:\n");
+                    scanf("%d",&year1);
+                    if(!is_int(year1)){
+                        printf("【警告】年份不为整数，请重新输入!\n");
+                        continue;
+                    }else {
+                        break;
+                    }
+                }
                 count_data_by_year(arr,count,year1);
             }
             break;
             case count_degree:{
-                printf("请输入要统计的年份:\n");
                 int year1=0;
-                scanf("%d",&year1);
+                while(1){
+                    printf("请输入要统计的年份:\n");
+                    scanf("%d",&year1);
+                    if(!is_int(year1)){
+                        printf("【警告】年份不为整数，请重新输入!\n");
+                        continue;
+                    }else {
+                        break;
+                    }
+                }
                 count_by_degree(arr,count,year1);
             }
             break;
             case count_major:{
-                printf("请输入要统计的年份:\n");
                 int year1=0;
-                scanf("%d",&year1);
+                while(1){
+                    printf("请输入要统计的年份:\n");
+                    scanf("%d",&year1);
+                    if(!is_int(year1)){
+                        printf("【警告】年份不为整数，请重新输入!\n");
+                        continue;
+                    }else {
+                        break;
+                    }
+                }
                 count_by_major(arr,count,year1);
             }
             break;
             case count_directions:{
-                printf("请输入要统计的年份:\n");
                 int year1=0;
-                scanf("%d",&year1);
+                while(1){
+                    printf("请输入要统计的年份:\n");
+                    scanf("%d",&year1);
+                    if(!is_int(year1)){
+                        printf("【警告】年份不为整数，请重新输入!\n");
+                        continue;
+                    }else {
+                        break;
+                    }
+                }
                 count_by_career(arr,count,year1);
             }
             break;
             case count_job_major:{
-                printf("请输入要统计的年份:\n");
                 int year1=0;
-                scanf("%d",&year1);
+                while(1){
+                    printf("请输入要统计的年份:\n");
+                    scanf("%d",&year1);
+                    if(!is_int(year1)){
+                        printf("【警告】年份不为整数，请重新输入!\n");
+                        continue;
+                    }else {
+                        break;
+                    }
+                }
                 count_by_job_major(arr,count,year1);
             }
             break;
