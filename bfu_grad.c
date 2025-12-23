@@ -207,19 +207,20 @@ void import_data_from_txt(struct Student arr[],int *count){
     }
     char line[512];
     double temp_year,temp_month,temp_day;
+    double enroll_year,graduation_year;
     char temp_gender[16];
     char temp_degree[32];
     char temp_career[32];
     while(fgets(line,sizeof(line),in)){
         line[strcspn(line,"\n")]=0;
         if(strlen(line)==0) continue;
-        int scanned_items = sscanf(line,"%31[^,],%63[^,],%15[^,],%lf/%lf/%lf,%d,%d,%31[^,],%127[^,],%31[^,],%127[^,],%63[^,\n]",
+        int scanned_items = sscanf(line,"%31[^,],%63[^,],%15[^,],%lf/%lf/%lf,%lf,%lf,%31[^,],%127[^,],%31[^,],%127[^,],%63[^,\n]",
             temp[*count].id,
             temp[*count].name,
             temp_gender,
             &temp_year,&temp_month,&temp_day,
-            &temp[*count].enroll_year,
-            &temp[*count].graduation_year,
+            &enroll_year,
+            &graduation_year,
             temp_degree,
             temp[*count].major,
             temp_career,
@@ -238,6 +239,16 @@ void import_data_from_txt(struct Student arr[],int *count){
             printf("【警告】已达到最大容量,停止导入!\n");
             continue;
         }
+        if(!is_int(enroll_year)){
+            printf("【警告】入学年不为整数,与实际不符,跳过该条记录:%s!\n",line);
+            continue;
+        }
+        if(!is_int(graduation_year)){
+            printf("【警告】毕业年不为整数,与实际不符,跳过该条记录:%s!\n",line);
+            continue;
+        }
+        temp[*count].enroll_year=(int)enroll_year;
+        temp[*count].graduation_year=(int)graduation_year;
         if(!check_enroll_grad(temp[*count].enroll_year,temp[*count].graduation_year)){
             printf("【警告】入学年大于毕业年,与实际不符,跳过该条记录:%s!\n",line);
             continue;
@@ -246,24 +257,14 @@ void import_data_from_txt(struct Student arr[],int *count){
             printf("【警告】日期不为整数,跳过该条记录:%s!\n",line);
             continue;
         }else{
-            temp[*count].bd.year=temp_year;
-            temp[*count].bd.month=temp_month;
-            temp[*count].bd.day=temp_day;
+            temp[*count].bd.year=(int)temp_year;
+            temp[*count].bd.month=(int)temp_month;
+            temp[*count].bd.day=(int)temp_day;
         }
         if(!check_birthday(&temp[*count].bd,*count)){
             printf("【警告】日期不合法,跳过该条记录:%s!\n",line);
             continue;
         }
-        strcpy(arr[*count].id,temp[*count].id);
-        strcpy(arr[*count].name,temp[*count].name);
-        arr[*count].bd.year=temp[*count].bd.year;
-        arr[*count].bd.month=temp[*count].bd.month;
-        arr[*count].bd.day=temp[*count].bd.day;
-        arr[*count].enroll_year=temp[*count].enroll_year;
-        arr[*count].graduation_year=temp[*count].graduation_year;
-        strcpy(arr[*count].major,temp[*count].major);
-        strcpy(arr[*count].employer,temp[*count].employer);
-        strcpy(arr[*count].job_major,temp[*count].job_major);
         if(!str_to_enum_gender(temp_gender,&temp[*count].gender)||!str_to_enum_degree(temp_degree,&temp[*count].degree)||!str_to_enum_career(temp_career,&temp[*count].career)){
             printf("【警告】性别/学历/就业去向数据内容错误，跳过该条记录: %s",line);
             continue;
@@ -547,81 +548,84 @@ void add_data(struct Student arr[], int *count) {
         printf("【警告】已达到最大容量,停止导入!\n");
         return;
     }
-
-    // 清掉 stdin 中残留的换行或多余字符（如果之前用了 scanf）
-    int ch;
-    while ((ch = getchar()) != '\n' && ch != EOF) {}
-
+    struct Student temp[MAXN];
     printf("==========增录毕业生就业信息==========\n");
-    printf("请按照输入示例的格式输入一条毕业生信息:\n");
-    printf("输入示例：251002125,张小寒,女,2006/12/10,2025,2029,本科生,计算机科学与技术,国内读博,北京大学,软件工程\n");
-
-    char line[512];
-    if (!fgets(line, sizeof(line), stdin)) {
-        printf("【警告】没有有效输入，操作取消！\n");
-        return;
+    while(1){
+        printf("请输入学号:\n");
+        scanf("%s",temp[*count].id);
+        if(check_dulicate_by_id(arr,*count,temp[*count].id)) {
+            printf("【警告】学号%s已存在，请重新输入!\n",temp[*count].id);
+            continue;
+        }else break;
     }
-    // 去掉末尾换行
-    size_t L = strlen(line);
-    if (L > 0 && line[L-1] == '\n') line[L-1] = '\0';
-
-    // 临时缓冲（大小必须 >= sscanf 中指定的最大长度 +1）
-    char temp_id[32];
-    char temp_name[64];
-    char temp_gender[16];
-    int y, m, d;
-    int enroll, grad;
-    char temp_degree[32];
-    char temp_major[128];
-    char temp_career[32];
-    char temp_employer[128];
-    char temp_job_major[64];
-
-    // 注意：这里的数字要与上面缓冲大小匹配（比如 %63 -> temp_name[64]）
-    int n = sscanf(line,
-        "%31[^,],%63[^,],%15[^,],%d/%d/%d,%d,%d,%31[^,],%127[^,],%31[^,],%127[^,],%63[^,]",
-        temp_id, temp_name, temp_gender,
-        &y, &m, &d, &enroll, &grad,
-        temp_degree, temp_major, temp_career, temp_employer, temp_job_major
-    );
-
-    if (n != 13) {
-        printf("【警告】数据格式错误（解析字段 %d/13），跳过该条记录: %s\n", n, line);
-        return;
+    printf("请输入姓名:\n");
+    scanf("%s",temp[*count].name);
+    char gender[16];
+    while(1){
+        printf("请输入性别(男/女):\n");
+        scanf("%s",gender);
+        if(!str_to_enum_gender(gender,&temp[*count].gender)){
+            printf("【警告】性别数据内容错误，请重新输入!\n");
+            continue;
+        }else break;
     }
-
-    // 重复学号检查（确保 check_dulicate 的签名为 check_dulicate(arr,count,id)）
-    if (check_dulicate_by_id(arr, *count, temp_id)) {
-        printf("【警告】学号 %s 已存在，请重新输入\n", temp_id);
-        return;
+    double y,m,d;
+    double enroll_year,graduation_year;
+    while(1){
+        printf("请输入出生日期:\n");
+        scanf("%lf%lf%lf",&y,&m,&d);
+        if(!check_birthday_is_int(y,m,d)){
+            printf("【警告】日期不为整数,请重新输入!\n");
+            continue;
+        }else{
+            temp[*count].bd.year=(int)y;
+            temp[*count].bd.month=(int)m;
+            temp[*count].bd.day=(int)d;
+        }
+        if(!check_birthday(&temp[*count].bd,*count)){
+            printf("【警告】日期不合法,请重新输入!\n");
+            continue;
+        }else break;
     }
-
-    // 枚举解析
-    int g = str_to_enum_gender(temp_gender,&arr[*count].gender);
-    int deg = str_to_enum_degree(temp_degree,&arr[*count].degree);
-    int car = str_to_enum_career(temp_career,&arr[*count].career);
-    if (g == 0 || deg == 0 || car == 0) {
-        printf("【警告】枚举字段内容错误，跳过该条记录: %s\n", line);
-        return;
+    while(1){
+        printf("请输入入学年:\n");
+        scanf("%lf",&enroll_year);
+        printf("请输入毕业年:\n");
+        scanf("%lf",&graduation_year);
+        if(!is_int(enroll_year)||!is_int(graduation_year)){
+            printf("【警告】入学年/毕业年不为整数,请重新输入!\n");
+            continue;
+        }else{
+            temp[*count].enroll_year=(int)enroll_year;
+            temp[*count].graduation_year=(int)graduation_year;
+        }
     }
-
-    // 填充结构体（注意不会越界）
-    struct Student new_student;
-    memset(&new_student, 0, sizeof(new_student));
-    strncpy(new_student.id, temp_id, sizeof(new_student.id)-1);
-    strncpy(new_student.name, temp_name, sizeof(new_student.name)-1);
-    new_student.gender = g;
-    new_student.bd.year = y; new_student.bd.month = m; new_student.bd.day = d;
-    new_student.enroll_year = enroll;
-    new_student.graduation_year = grad;
-    new_student.degree = deg;
-    strncpy(new_student.major, temp_major, sizeof(new_student.major)-1);
-    new_student.career = car;
-    strncpy(new_student.employer, temp_employer, sizeof(new_student.employer)-1);
-    strncpy(new_student.job_major, temp_job_major, sizeof(new_student.job_major)-1);
-
+    char degree[32];
+    while(1){
+        printf("请输入学历（本科生/硕士研究生/博士研究生）:\n");
+        scanf("%s",degree);
+        if(!str_to_enum_degree(degree,&temp[*count].degree)){
+            printf("【警告】学历数据内容错误，请重新输入!\n");
+            continue;
+        }else break;
+    }
+    printf("请输入毕业专业:\n");
+    scanf("%s",temp[*count].major);
+    char career[32];
+    while(1){
+        printf("请输入就业方向（直接工作/公务员/国内读硕/出国读硕/国内读博/国外读博/二战/二学位/未就业/其他）:\n");
+        scanf("%s",career);
+        if(!str_to_enum_career(career,&temp[*count].career)){
+            printf("【警告】学历数据内容错误，请重新输入!\n");
+            continue;
+        }else break;
+    }
+    printf("请输入就业或升学单位:\n");
+    scanf("%s",temp[*count].employer);
+    printf("请输入毕业后所从事的专业:\n");
+    scanf("%s",temp[*count].job_major);
     // 放入内存数组
-    arr[*count] = new_student;
+    arr[*count] = temp[*count];
     (*count)++;
 
     // 追加到文件
@@ -630,7 +634,7 @@ void add_data(struct Student arr[], int *count) {
         printf("【警告】无法打开文件 students.dat 以写入！\n");
         return;
     }
-    size_t written = fwrite(&new_student, sizeof(struct Student), 1, out);
+    size_t written = fwrite(&temp, sizeof(struct Student), 1, out);
     fclose(out);
 
     if (written == 1) {
@@ -732,44 +736,130 @@ void modify_student(struct Student stu[], int current_count){
     scanf("%d", &choice);
     getchar();
     if(choice == 0) return;
-    char buf[64];
-    printf("请输入新的值：\n");
-    scanf("%s", buf);
-    getchar();
+    struct Student temp[MAXN];
     switch(choice){
         case 1:
-            strcpy(stu[i].name, buf);
+            {
+                char name[64];
+                scanf("%s",name);
+                strcpy(stu[i].name,name);
+            }
             break;
         case 2:
-            if(!str_to_enum_gender(buf, &stu[i].gender))
-                printf("【警告】无效的性别选项！\n");
+            {
+                char gender[16];
+                while(1){
+                    printf("请输入性别(男/女):\n");
+                    scanf("%s",gender);
+                    if(!str_to_enum_gender(gender,&temp[i].gender)){
+                        printf("【警告】性别数据内容错误，请重新输入!\n");
+                        continue;
+                    }else break;
+                }
+                stu[i].gender=temp[i].gender;
+            }
             break;
         case 3:
-            sscanf(buf, "%d/%d/%d",
-                   &stu[i].bd.year,&stu[i].bd.month,&stu[i].bd.day);
+            {
+                while(1){
+                    double y,m,d;
+                    printf("请输入出生日期:\n");
+                    scanf("%lf%lf%lf",&y,&m,&d);
+                    if(!check_birthday_is_int(y,m,d)){
+                        printf("【警告】日期不为整数,请重新输入!\n");
+                        continue;
+                    }else{
+                        temp[i].bd.year=(int)y;
+                        temp[i].bd.month=(int)m;
+                        temp[i].bd.day=(int)d;
+                    }
+                    if(!check_birthday(&temp[i].bd,i)){
+                    printf("【警告】日期不合法,请重新输入!\n");
+                    continue;
+                    }else break;
+                }
+                stu[i].bd=temp[i].bd;
+            }
             break;
         case 4:
-            stu[i].enroll_year = atoi(buf);
+            {
+                double enroll_year;
+                while(1){
+                    printf("请输入入学年:\n");
+                    scanf("%lf",&enroll_year);
+                    if(!is_int(enroll_year)){
+                        printf("【警告】入学年不为整数,请重新输入!\n");
+                        continue;
+                    }else{
+                        temp[i].enroll_year=(int)enroll_year;
+                        break;
+                    }
+                }
+                stu[i].enroll_year=temp[i].enroll_year;
+            }
             break;
         case 5:
-            stu[i].graduation_year = atoi(buf);
+            {
+                double graduation_year;
+                while(1){
+                    printf("请输入毕业年:\n");
+                    scanf("%lf",&graduation_year);
+                    if(!is_int(graduation_year)){
+                        printf("【警告】毕业年不为整数,请重新输入!\n");
+                        continue;
+                    }else{
+                        temp[i].graduation_year=(int)graduation_year;
+                        break;
+                    }
+                }
+                stu[i].graduation_year=temp[i].graduation_year;
+            }
             break;
         case 6:
-            if(!str_to_enum_degree(buf, &stu[i].degree))
-                printf("【警告】无效的学历选项！\n");
+            {
+                char degree[32];
+                while(1){
+                    printf("请输入学历（本科生/硕士研究生/博士研究生）:\n");
+                    scanf("%s",degree);
+                    if(!str_to_enum_degree(degree,&temp[i].degree)){
+                        printf("【警告】无效的学历选项,请重新输入!\n");
+                        continue;
+                    }else break;
+                }
+                stu[i].degree=temp[i].degree;
+            }
             break;
         case 7:
-            strcpy(stu[i].major, buf);
+            {
+                printf("请输入毕业专业:\n");
+                scanf("%s",temp[i].major);
+            }
             break;
         case 8:
-            if(!str_to_enum_career(buf, &stu[i].career))
-                printf("【警告】无效的就业去向选项！\n");
+            {
+                char career[32];
+                while(1){
+                    printf("请输入就业方向（直接工作/公务员/国内读硕/出国读硕/国内读博/国外读博/二战/二学位/未就业/其他）:\n");
+                    scanf("%s",career);
+                    if(!str_to_enum_career(career,&temp[i].career)){
+                        printf("【警告】无效的就业去向选项，请重新输入!\n");
+                        continue;
+                    }else break;
+                }
+                stu[i].career=temp[i].career;
+            }
             break;
         case 9:
-            strcpy(stu[i].employer, buf);
+            {
+                printf("请输入就业或升学单位:\n");
+                scanf("%s",stu[i].employer);
+            }
             break;
         case 10:
-            strcpy(stu[i].job_major, buf);
+            {
+                printf("请输入毕业后所从事的专业:\n");
+                scanf("%s",stu[i].job_major);
+            }
             break;
         default:
             printf("【警告】无效的选项！\n");
