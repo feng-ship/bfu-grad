@@ -174,23 +174,25 @@ int check_birthday_is_int(double year,double month,double day){
 int is_runnian(int year){
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
 }
-int check_birthday(struct BirthDate s[],int n){
-    if(s[n].month>12||s[n].month<1||s[n].day<1||s[n].day>31){
-        return 0;
+int check_birthday(const struct BirthDate *bd){
+    if (bd->month < 1 || bd->month > 12) return 0;
+    if (bd->day < 1) return 0;
+
+    if (bd->month==1||bd->month==3||bd->month==5||
+        bd->month==7||bd->month==8||bd->month==10||bd->month==12){
+        if (bd->day > 31) return 0;
     }
-    if(s[n].month==1||s[n].month==3||s[n].month==5||s[n].month==7||s[n].month==8||s[n].month==10||s[n].month==12){
-        if(s[n].day>31) return 0;
+
+    if (bd->month==4||bd->month==6||
+        bd->month==9||bd->month==11){
+        if (bd->day > 30) return 0;
     }
-    if(s[n].month==4||s[n].month==6||s[n].month==9||s[n].month==11){
-        if(s[n].day>30) return 0;
-    }
-    if(!is_runnian(s[n].year)){
-        if(s[n].month==2){
-            if(s[n].day>28) return 0;
-        }
-    }else{
-        if(s[n].month==2){
-            if(s[n].day>29) return 0;
+
+    if (bd->month == 2){
+        if (is_runnian(bd->year)){
+            if (bd->day > 29) return 0;
+        } else {
+            if (bd->day > 28) return 0;
         }
     }
     return 1;
@@ -261,7 +263,7 @@ void import_data_from_txt(struct Student arr[],int *count){
             temp[*count].bd.month=(int)temp_month;
             temp[*count].bd.day=(int)temp_day;
         }
-        if(!check_birthday(&temp[*count].bd,*count)){
+        if(!check_birthday(&temp[*count].bd)){
             printf("【警告】日期不合法,跳过该条记录:%s!\n",line);
             continue;
         }
@@ -570,23 +572,26 @@ void add_data(struct Student arr[], int *count) {
         }else break;
     }
     double y,m,d;
-    double enroll_year,graduation_year;
     while(1){
-        printf("请输入出生日期:\n");
-        scanf("%lf%lf%lf",&y,&m,&d);
+        printf("请输入出生日期（YYYY/MM/DD）:\n");
+        if(scanf("%lf/%lf/%lf",&y,&m,&d)!=3){
+            printf("【警告】输入格式错误，请按照YYYY/MM/DD格式输入\n");
+            continue;
+        }
         if(!check_birthday_is_int(y,m,d)){
             printf("【警告】日期不为整数,请重新输入!\n");
             continue;
-        }else{
-            temp[*count].bd.year=(int)y;
-            temp[*count].bd.month=(int)m;
-            temp[*count].bd.day=(int)d;
         }
-        if(!check_birthday(&temp[*count].bd,*count)){
+        temp[*count].bd.year=(int)y;
+        temp[*count].bd.month=(int)m;
+        temp[*count].bd.day=(int)d;
+        if(!check_birthday(&temp[*count].bd)){
             printf("【警告】日期不合法,请重新输入!\n");
             continue;
-        }else break;
+        }
+        break;
     }
+    double enroll_year,graduation_year;
     while(1){
         printf("请输入入学年:\n");
         scanf("%lf",&enroll_year);
@@ -595,10 +600,14 @@ void add_data(struct Student arr[], int *count) {
         if(!is_int(enroll_year)||!is_int(graduation_year)){
             printf("【警告】入学年/毕业年不为整数,请重新输入!\n");
             continue;
-        }else{
-            temp[*count].enroll_year=(int)enroll_year;
-            temp[*count].graduation_year=(int)graduation_year;
         }
+        if(enroll_year>graduation_year){
+            printf("【警告】入学年份大于毕业年份，与实际不符，请重新输入!\n");
+            continue;
+        }
+        temp[*count].enroll_year=(int)enroll_year;
+        temp[*count].graduation_year=(int)graduation_year;
+        break;
     }
     char degree[32];
     while(1){
@@ -764,7 +773,7 @@ void modify_student(struct Student stu[], int current_count){
                 while(1){
                     double y,m,d;
                     printf("请输入出生日期:\n");
-                    scanf("%lf%lf%lf",&y,&m,&d);
+                    scanf("%lf/%lf/%lf",&y,&m,&d);
                     if(!check_birthday_is_int(y,m,d)){
                         printf("【警告】日期不为整数,请重新输入!\n");
                         continue;
@@ -773,7 +782,7 @@ void modify_student(struct Student stu[], int current_count){
                         temp[i].bd.month=(int)m;
                         temp[i].bd.day=(int)d;
                     }
-                    if(!check_birthday(&temp[i].bd,i)){
+                    if(!check_birthday(&temp[i].bd)){
                     printf("【警告】日期不合法,请重新输入!\n");
                     continue;
                     }else break;
@@ -790,10 +799,13 @@ void modify_student(struct Student stu[], int current_count){
                     if(!is_int(enroll_year)){
                         printf("【警告】入学年不为整数,请重新输入!\n");
                         continue;
-                    }else{
-                        temp[i].enroll_year=(int)enroll_year;
-                        break;
                     }
+                    temp[i].enroll_year=(int)enroll_year;
+                    if(temp[i].enroll_year>stu[i].graduation_year){
+                        printf("【警告】入学年份大于毕业年份，与实际不符，请重新输入!\n");
+                        continue;
+                    }
+                    break;
                 }
                 stu[i].enroll_year=temp[i].enroll_year;
             }
@@ -807,10 +819,13 @@ void modify_student(struct Student stu[], int current_count){
                     if(!is_int(graduation_year)){
                         printf("【警告】毕业年不为整数,请重新输入!\n");
                         continue;
-                    }else{
-                        temp[i].graduation_year=(int)graduation_year;
-                        break;
                     }
+                    temp[i].graduation_year=(int)graduation_year;
+                    if(stu[i].enroll_year>temp[i].graduation_year){
+                        printf("【警告】入学年份大于毕业年份，与实际不符，请重新输入!\n");
+                        continue;
+                    }
+                    break;
                 }
                 stu[i].graduation_year=temp[i].graduation_year;
             }
